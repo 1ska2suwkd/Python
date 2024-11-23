@@ -94,7 +94,7 @@ class Tetris:
     def draw_hold_block(self):
         """킵된 블록을 검은색 선 상자로 표시"""
         hold_area_x = GRID_WIDTH * BLOCK_SIZE + 20  # 킵 영역 시작 X 위치
-        hold_area_y = 50  # 킵 영역 시작 Y 위치
+        hold_area_y = 80  # 킵 영역 시작 Y 위치
         hold_area_width = 4 * BLOCK_SIZE  # 킵 영역 너비
         hold_area_height = 4 * BLOCK_SIZE  # 킵 영역 높이
 
@@ -248,11 +248,14 @@ def main():
             tetris.draw_block()
             tetris.draw_hold_block()
 
+
             # 점수 표시
-            score_text = FONT.render(f"Score: {tetris.score}", True, WHITE)
-            high_score_text = FONT.render(f"High Score: {high_score}", True, WHITE)
-            screen.blit(score_text, (10, 10))
-            screen.blit(high_score_text, (10, 40))
+            score_text = FONT.render(f"Score: {tetris.score}", True, BLACK)
+            high_score_text = FONT.render(f"High Score: {high_score}", True, BLACK)
+            score_x = WIDTH - 150  # 오른쪽 여백을 고려한 X 위치
+            screen.blit(score_text, (score_x, 10))  # 오른쪽 상단에 출력
+            screen.blit(high_score_text, (score_x, 40))  # 오른쪽 상단에 출력
+
 
             # 현재 시간
             current_time = pygame.time.get_ticks()
