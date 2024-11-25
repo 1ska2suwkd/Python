@@ -1,0 +1,7 @@
+Coke count is 3.
+1000 won received
+2000 won received
+Change is 1000 won.
+3000 won received
+Change is 2000 won.
+Sold out
