@@ -1,0 +1,8 @@
+Computer selected a random number.
+SMALL
+SMALL
+SMALL
+BIG
+SMALL
+SMALL
+Bingo! You tried 3 times.
