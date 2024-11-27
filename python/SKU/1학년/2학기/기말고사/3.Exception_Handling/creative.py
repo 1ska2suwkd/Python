@@ -1,9 +1,9 @@
-class MyError(Exception):
+class MyError (Exception):
     def __str__(self):
-        return "이용되지 않는 별명입니다."
+        return "허용되지 않는 별명입니다."
 
 def say_nick(nick):
-    if nick == "바보":
+    if nick == '바보':
         raise MyError()
     print(nick)
 
