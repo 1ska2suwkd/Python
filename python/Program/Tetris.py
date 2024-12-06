@@ -1,5 +1,7 @@
 import pygame
 import random
+import sys  # sys 모듈을 추가로 임포트
+
 
 # 초기화
 pygame.init()
@@ -224,7 +226,7 @@ def game_over_screen(score, high_score):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     waiting = False
