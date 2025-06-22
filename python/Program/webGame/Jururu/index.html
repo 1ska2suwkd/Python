@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>캐릭터 움직이기</title>
+  <title>Ruru</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
@@ -44,21 +44,42 @@
     }
 
     function update() {
-      const speed = 200;
-      player.setVelocity(0);
+      const speed = 400;
+      let vx = 0;
+      let vy = 0;
 
       if (cursors.left.isDown) {
-        player.setVelocityX(-speed);
+        vx = -speed;
       } else if (cursors.right.isDown) {
-        player.setVelocityX(speed);
+        vx = speed;
       }
 
       if (cursors.up.isDown) {
-        player.setVelocityY(-speed);
+        vy = -speed;
       } else if (cursors.down.isDown) {
-        player.setVelocityY(speed);
+        vy = speed;
       }
-    }
+
+      player.setVelocity(vx, vy);
+
+      // 👇 화면 벗어나면 반대쪽으로 워프
+      const width = this.sys.game.config.width;
+      const height = this.sys.game.config.height;
+
+      if (player.x < 0) {
+        player.x = width;
+      } else if (player.x > width) {
+        player.x = 0;
+      }
+
+      if (player.y < 0) {
+        player.y = height;
+      } else if (player.y > height) {
+        player.y = 0;
+      }
+  }
+
+    
   </script>
 </body>
 </html>
