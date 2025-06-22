@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>Ruru</title>
+  <title>캐릭터 움직이기</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
@@ -28,10 +28,11 @@
     const game = new Phaser.Game(config);
     let player;
     let cursors;
+    let xpOrbs; //경험치 공
 
     function preload() {
-      // 플레이어 이미지 불러오기
       this.load.image('player', 'player.png');
+      this.load.image('xpOrbs', 'xpOrbs.webp');
     }
 
     function create() {
@@ -41,6 +42,28 @@
       player.setCollideWorldBounds(false);
 
       cursors = this.input.keyboard.createCursorKeys();
+
+      xpOrbs = this.physics.add.group();
+
+      this.time.addEvent({
+        delay: 1000,
+        callback: spawnXp0rbs,
+        callbackScope: this,
+        loop: true
+      });
+    }
+
+    function spawnXp0rbs(){
+      const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
+      const y = Phaser.Math.Between(20, this.sys.game.config.height - 20);
+
+      const orb = xpOrbs.create(x, y, 'xpOrbs');
+      orb.setScale(0.5);
+
+      // 5초 후에 공 사라지게 타이머 설정
+      this.time.delayedCall(5000, () => {
+        orb.destroy();
+      });
     }
 
     function update() {
@@ -77,6 +100,8 @@
       } else if (player.y > height) {
         player.y = 0;
       }
+
+      
   }
 
     
