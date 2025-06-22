@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>캐릭터 움직이기</title>
+  <title>Level up! ruru!</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
@@ -58,7 +58,7 @@
       const y = Phaser.Math.Between(20, this.sys.game.config.height - 20);
 
       const orb = xpOrbs.create(x, y, 'xpOrbs');
-      orb.setScale(0.5);
+      orb.setScale(0.1);
 
       // 5초 후에 공 사라지게 타이머 설정
       this.time.delayedCall(5000, () => {
@@ -85,7 +85,7 @@
 
       player.setVelocity(vx, vy);
 
-      // 👇 화면 벗어나면 반대쪽으로 워프
+      // 화면 벗어나면 반대쪽으로 워프
       const width = this.sys.game.config.width;
       const height = this.sys.game.config.height;
 
