@@ -65,19 +65,21 @@
   
     function collectXpOrb(player, orb) {
       orb.destroy();
-      xp += 20;
+
+      // 💡 orb.xpValue만큼 경험치 증가
+      xp += orb.xpValue;
 
       if (xp >= 100) {
         xp -= 100;
         level += 1;
-        console.log("레벨업! 현재 레벨:", level);
       }
 
-      updateXpBar(); // 경험치 바 갱신
+      updateXpBar();
     }
 
+
     function create() {
-      
+
       this.add.image(400, 300, 'background').setScale(1.9);
 
       xpBar = this.add.graphics();
@@ -112,20 +114,27 @@
 
     
 
-    function spawnXp0rbs(){
+    function spawnXp0rbs() {
       const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
       const y = Phaser.Math.Between(20, this.sys.game.config.height - 20);
 
-      const orb = xpOrbs.create(x, y, 'xpOrbs');
-      orb.setScale(0.1);
+      // 랜덤한 크기 (0.05 ~ 0.2 배)
+      const scale = Phaser.Math.FloatBetween(0.05, 0.2);
 
+      const orb = xpOrbs.create(x, y, 'xpOrbs');
+      orb.setScale(scale);
       orb.play('orbSpin');
 
-      // 5초 후에 공 사라지게 타이머 설정
+      // 💡 크기에 따라 경험치 양 설정
+      // (예: 0.05 → 10 XP, 0.2 → 40 XP 등)
+      orb.xpValue = Math.round(scale * 200); // 0.05~0.2 → 10~40
+
+      // 5초 후 자동 제거
       this.time.delayedCall(5000, () => {
-        orb.destroy();
+        if (orb && orb.active) orb.destroy();
       });
     }
+
 
     function update() {
       const speed = 400;
