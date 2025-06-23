@@ -32,7 +32,11 @@
 
     function preload() {
       this.load.image('player', 'player.png');
-      this.load.image('xpOrbs', 'xpOrbs.webp');
+      this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
+        frameWidth: 275,
+        frameHeight: 275
+      });
+
     }
 
     function create() {
@@ -45,6 +49,14 @@
 
       xpOrbs = this.physics.add.group();
 
+      this.anims.create({
+        key: 'orbSpin',
+        frames: this.anims.generateFrameNumbers('xpOrbs', { start: 0, end: 11 }),
+        frameRate: 10,
+        repeat: -1
+      });
+
+
       this.time.addEvent({
         delay: 1000,
         callback: spawnXp0rbs,
@@ -53,12 +65,16 @@
       });
     }
 
+    
+
     function spawnXp0rbs(){
       const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
       const y = Phaser.Math.Between(20, this.sys.game.config.height - 20);
 
       const orb = xpOrbs.create(x, y, 'xpOrbs');
       orb.setScale(0.1);
+
+      orb.play('orbSpin');
 
       // 5초 후에 공 사라지게 타이머 설정
       this.time.delayedCall(5000, () => {
