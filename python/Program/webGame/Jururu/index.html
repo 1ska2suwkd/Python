@@ -29,9 +29,14 @@
     let player;
     let cursors;
     let xpOrbs; //경험치 공
+    let xp = 0;
+    let level = 1;
+    let xpBar;
+
 
     function preload() {
       this.load.image('player', 'player.png');
+      this.load.image('background', 'background.png');  
       this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
         frameWidth: 275,
         frameHeight: 275
@@ -39,7 +44,45 @@
 
     }
 
+    function updateXpBar() {
+      const maxXp = 100;
+      const barWidth = 200;
+      const barHeight = 10;
+      const x = 300;  // 화면 중앙
+      const y = 570;  // 화면 하단
+
+      const fillRatio = xp / maxXp;
+
+      xpBar.clear();
+      xpBar.fillStyle(0x222222, 1);
+      xpBar.fillRect(x, y, barWidth, barHeight); // 배경
+
+      xpBar.fillStyle(0x00ff00, 1);
+      xpBar.fillRect(x, y, barWidth * fillRatio, barHeight); // 초록바
+
+      // 텍스트도 원하면 추가 가능
+    }
+  
+    function collectXpOrb(player, orb) {
+      orb.destroy();
+      xp += 20;
+
+      if (xp >= 100) {
+        xp -= 100;
+        level += 1;
+        console.log("레벨업! 현재 레벨:", level);
+      }
+
+      updateXpBar(); // 경험치 바 갱신
+    }
+
     function create() {
+      
+      this.add.image(400, 300, 'background').setScale(1.9);
+
+      xpBar = this.add.graphics();
+      updateXpBar();
+
       // 플레이어 생성
       player = this.physics.add.sprite(400, 300, 'player');
       player.setScale(0.1);
@@ -48,6 +91,8 @@
       cursors = this.input.keyboard.createCursorKeys();
 
       xpOrbs = this.physics.add.group();
+
+      this.physics.add.overlap(player, xpOrbs, collectXpOrb, null, this);
 
       this.anims.create({
         key: 'orbSpin',
