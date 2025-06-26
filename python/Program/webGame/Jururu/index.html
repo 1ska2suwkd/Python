@@ -26,22 +26,19 @@
     };
 
     const game = new Phaser.Game(config);
-    let player;
-    let cursors;
-    let xpOrbs; //경험치 공
-    let xp = 0;
-    let level = 1;
-    let xpBar;
-
+    let player, cursors, xpOrbs, xp = 0, level = 1;
+    let xpBar, levelText;
+    let inventory = [];
+    let inventoryVisible = false; //인벤토리 화면을 여는 상태
 
     function preload() {
       this.load.image('player', 'player.png');
       this.load.image('background', 'background.png');  
+      this.load.image('inventory','inventory.jpge')
       this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
         frameWidth: 275,
         frameHeight: 275
       });
-
     }
 
     function updateXpBar() {
@@ -74,16 +71,24 @@
         level += 1;
       }
 
+      levelText.setText(level);
+
       updateXpBar();
     }
 
 
     function create() {
 
-      this.add.image(400, 300, 'background').setScale(1.9);
+      this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
 
-      xpBar = this.add.graphics();
+      xpBar = this.add.graphics().setDepth(1);
       updateXpBar();
+
+      levelText = this.add.text(395, 545, `${level}`, {
+        fontSize: '20px',
+        fill: '#00ff00',  // 초록색 텍스트
+        fontFamily: 'Minecraft',  
+      }).setDepth(1);  
 
       // 플레이어 생성
       player = this.physics.add.sprite(400, 300, 'player');
@@ -92,8 +97,23 @@
 
       cursors = this.input.keyboard.createCursorKeys();
 
-      xpOrbs = this.physics.add.group();
+      this.input.keyboard.on('keydown-E', () => {
+          if (inventoryVisible) {
+            inventoryImage.setVisible(false); // 인벤토리 닫기
+            inventoryVisible = false;
+          } else {
+            inventoryImage.setVisible(true); // 인벤토리 열기
+            inventoryVisible = true;
+          }
+      });
 
+      // 인벤토리 이미지 추가 (숨겨둔 상태로)
+      inventoryImage = this.add.image(400, 300, 'inventory'); // inventory는 '728x406' 크기의 이미지 파일
+      inventoryImage.setScale(1); // 크기 조정
+      inventoryImage.setVisible(false); // 처음엔 보이지 않도록 설정
+      inventoryVisible = false
+      
+      xpOrbs = this.physics.add.group();
       this.physics.add.overlap(player, xpOrbs, collectXpOrb, null, this);
 
       this.anims.create({
@@ -111,8 +131,6 @@
         loop: true
       });
     }
-
-    
 
     function spawnXp0rbs() {
       const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
@@ -170,6 +188,28 @@
       } else if (player.y > height) {
         player.y = 0;
       }
+
+      xpOrbs.getChildren().forEach((orb) => {
+        // 플레이어와 오브의 거리 계산
+        const distance = Phaser.Math.Distance.Between(player.x, player.y, orb.x, orb.y);
+
+        // 끌어오는 범위 설정 (예: 150px 이하)
+        const attractDistance = 150;
+        const maxAttractDistance = 175;  // 끌려오는 최대 범위
+
+        if (distance < attractDistance) {  
+          // 플레이어와 가까우면 끌어오기
+          const angle = Phaser.Math.Angle.Between(orb.x, orb.y, player.x, player.y);
+          
+          const speedMultiplier = 0.4;  // 속도 조절
+          orb.setVelocity(Math.cos(angle) * speed * speedMultiplier, Math.sin(angle) * speed * speedMultiplier);
+
+        } else if (distance > maxAttractDistance) {
+          // 멀어지면 더 이상 끌어오지 않도록 속도 리셋
+          orb.setVelocity(0, 0);
+        }
+      });
+
 
       
   }
