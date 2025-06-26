@@ -34,21 +34,25 @@
     function preload() {
       this.load.image('player', 'player.png');
       this.load.image('background', 'background.png');  
-      this.load.image('inventory','inventory.jpge')
+      this.load.image('inventory','inventory.png')
       this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
         frameWidth: 275,
         frameHeight: 275
       });
     }
 
+    // 기존의 const MAX_XP = 100; 는 제거하고 대신 함수로
+    function getMaxXp(level) {
+      return 100 + (level - 1) * 20;
+    }
+    
+
     function updateXpBar() {
-      const maxXp = 100;
       const barWidth = 200;
       const barHeight = 10;
       const x = 300;  // 화면 중앙
       const y = 570;  // 화면 하단
-
-      const fillRatio = xp / maxXp;
+      const fillRatio = xp / getMaxXp(level);
 
       xpBar.clear();
       xpBar.fillStyle(0x222222, 1);
@@ -57,21 +61,26 @@
       xpBar.fillStyle(0x00ff00, 1);
       xpBar.fillRect(x, y, barWidth * fillRatio, barHeight); // 초록바
 
-      // 텍스트도 원하면 추가 가능
     }
   
     function collectXpOrb(player, orb) {
       orb.destroy();
-
       // 💡 orb.xpValue만큼 경험치 증가
       xp += orb.xpValue;
 
-      if (xp >= 100) {
-        xp -= 100;
-        level += 1;
+      let leveledUp = false
+
+      while (xp >= getMaxXp(level)){
+        xp -= getMaxXp(level);
+        level++;
+        leveledUp = true;
+
+        const item = getRandomItem();
+        console.log({item})
       }
 
       levelText.setText(level);
+      
 
       updateXpBar();
     }
@@ -81,14 +90,14 @@
 
       this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
 
-      xpBar = this.add.graphics().setDepth(1);
+      xpBar = this.add.graphics().setDepth(2);
       updateXpBar();
 
       levelText = this.add.text(395, 545, `${level}`, {
         fontSize: '20px',
         fill: '#00ff00',  // 초록색 텍스트
         fontFamily: 'Minecraft',  
-      }).setDepth(1);  
+      }).setDepth(2);  
 
       // 플레이어 생성
       player = this.physics.add.sprite(400, 300, 'player');
@@ -108,11 +117,12 @@
       });
 
       // 인벤토리 이미지 추가 (숨겨둔 상태로)
-      inventoryImage = this.add.image(400, 300, 'inventory'); // inventory는 '728x406' 크기의 이미지 파일
-      inventoryImage.setScale(1); // 크기 조정
+      inventoryImage = this.add.image(400, 300, 'inventory').setDepth(1); // inventory는 '728x406' 크기의 이미지 파일
+      inventoryImage.setOrigin(0.5)
+      inventoryImage.setScale(1.3); // 크기 조정
       inventoryImage.setVisible(false); // 처음엔 보이지 않도록 설정
       inventoryVisible = false
-      
+
       xpOrbs = this.physics.add.group();
       this.physics.add.overlap(player, xpOrbs, collectXpOrb, null, this);
 
@@ -209,10 +219,26 @@
           orb.setVelocity(0, 0);
         }
       });
+    }
 
+    const itemPool = [
+        { name: "네더라이트 곡괭이", probability: 1 },
+        { name: "다이아 곡괭이", probability: 20 },
+        { name: "돌 곡괭이", probability: 79 }
+      ];
 
-      
-  }
+    function getRandomItem() {
+      const rand = Phaser.Math.Between(1, 100);
+      let cumulative = 0;
+
+      for (let item of itemPool) {
+        cumulative += item.probability;
+        if (rand <= cumulative) {
+          return item.name;
+        }
+      }
+    }
+
 
     
   </script>
