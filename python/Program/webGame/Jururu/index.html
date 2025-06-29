@@ -6,6 +6,8 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
   <script>
     class StartScene extends Phaser.Scene {
       constructor() {
@@ -86,9 +88,9 @@
           'boxA': [{ frame: 1, name: 'A 등급 아이템' }],
           'boxB': [{ frame: 2, name: 'B 등급 아이템' }],
           'boxC': [
-            { frame: 7, name: 'C 등급 아이템 1' },  // 기존 C등급 아이템
-            { frame: 8, name: 'C 등급 아이템 2' },  // 새로운 C등급 아이템 1
-            { frame: 9, name: 'C 등급 아이템 3' },  // 새로운 C등급 아이템 2
+            { frame: 7, name: 'C rank item' },  // 기존 C등급 아이템
+            { frame: 8, name: 'C rank item' },  // 새로운 C등급 아이템 1
+            { frame: 9, name: 'C rank item' },  // 새로운 C등급 아이템 2
           ],
           'boxD': [{ frame: 6, name: 'D 등급 아이템' }]
         };
@@ -218,13 +220,14 @@
 
         // 아이템 생성 (상자의 중앙에서 생성)
         const itemSprite = this.add.sprite(chest.x, chest.y, 'item', itemFrame).setScale(10).setDepth(5);
-        itemSprite.setDepth(6);
 
           // 아이템 이름 텍스트 추가
         const itemNameText = this.add.text(chest.x, chest.y - 60, item.name, {
           fontSize: '20px',
           fill: '#ffffff',
-          fontFamily: 'Arial'
+          fontFamily: '"Press Start 2P", monospace',
+          stroke: '#000000',
+          strokeThickness: 2,
         }).setOrigin(0.5).setDepth(6);
 
         // 아이템이 상자에서 나오는 애니메이션 (위로 올라가는)
@@ -237,6 +240,7 @@
             // 아이템이 이동 후 3초 후 제거
             this.time.delayedCall(3000, () => {
               itemSprite.destroy();
+              itemNameText.destroy();
             });
           }
         });
@@ -293,6 +297,20 @@
 
         if (this.player.y < 0) this.player.y = height;
         else if (this.player.y > height) this.player.y = 0;
+
+        this.xpOrbs.getChildren().forEach((orb) => {
+          const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, orb.x, orb.y);
+          const attractDistance = 150;
+          const maxAttractDistance = 175;
+
+          if (distance < attractDistance) {
+            const angle = Phaser.Math.Angle.Between(orb.x, orb.y, this.player.x, this.player.y);
+            const speedMultiplier = 0.4;
+            orb.setVelocity(Math.cos(angle) * speed * speedMultiplier, Math.sin(angle) * speed * speedMultiplier);
+          } else if (distance > maxAttractDistance) {
+            orb.setVelocity(0, 0);
+          }
+        });
       }
     }
 
