@@ -69,8 +69,8 @@
           frameHeight: 275
         });
         this.load.spritesheet('chest', 'chestSheet.png', {
-          frameWidth: 185,
-          frameHeight: 200
+          frameWidth: 48,
+          frameHeight: 40
         });
       }
 
@@ -150,12 +150,7 @@
           repeat: -1
         });
 
-        this.anims.create({
-          key: 'chestOpen',
-          frames: this.anims.generateFrameNumbers('chest', { start: 0, end: 36 }),
-          frameRate: 15,
-          hideOnComplete: false
-        });
+        this.createBoxAnimations();
 
         this.time.addEvent({
           delay: 1000,
@@ -163,6 +158,58 @@
           callbackScope: this,
           loop: true
         });
+      }
+
+      createBoxAnimations() {
+        // D 등급 (하위 등급)
+        this.anims.create({
+          key: 'boxD',
+          frames: this.anims.generateFrameNumbers('chest', { start: 168, end: 188 }), // D 등급 상자
+          frameRate: 10,
+          repeat: -1
+        });
+
+        // C 등급
+        this.anims.create({
+          key: 'boxC',
+          frames: this.anims.generateFrameNumbers('chest', { start: 21, end: 41 }), // C 등급 상자
+          frameRate: 10,
+          repeat: -1
+        });
+
+        // B 등급
+        this.anims.create({
+          key: 'boxB',
+          frames: this.anims.generateFrameNumbers('chest', { start: 126, end: 146 }), // B 등급 상자
+          frameRate: 10,
+          repeat: -1
+        });
+
+        // A 등급
+        this.anims.create({
+          key: 'boxA',
+          frames: this.anims.generateFrameNumbers('chest', { start: 0, end: 20 }), // A 등급 상자
+          frameRate: 10,
+          repeat: -1
+        });
+
+        // S 등급 (최고 등급)
+        this.anims.create({
+          key: 'boxS',
+          frames: this.anims.generateFrameNumbers('chest', { start: 63, end: 83 }), // S 등급 상자
+          frameRate: 10,
+          repeat: -1
+        });
+      }
+
+      // 랜덤으로 상자 등급을 선택하는 함수
+      getRandomBoxAnimation() {
+        const rand = Phaser.Math.Between(1, 100); // 1부터 100까지 랜덤 숫자
+        if (rand <= 10) return 'boxS'; // S 등급 상자 (10% 확률)
+        if (rand <= 30) return 'boxA'; // A 등급 상자 (20% 확률)
+        if (rand <= 55) return 'boxB'; // B 등급 상자 (25% 확률)
+        if (rand <= 80) return 'boxC'; // C 등급 상자 (25% 확률)
+        return 'boxD'; // D 등급 상자 (20% 확률)
       }
 
       spawnXp0rbs() {
@@ -233,8 +280,9 @@
       }
 
       showLevelUpChest(itemName) {
-        const chest = this.add.sprite(400, 300, 'chest').setScale(1.2).setDepth(5);
-        chest.play('chestOpen');
+        const chest = this.add.sprite(400, 300, 'chest').setScale(6).setDepth(5);
+        const animationKey = this.getRandomBoxAnimation();
+        chest.play(animationKey);
 
         const itemText = this.add.text(400, 380, `획득! ${itemName}`, {
           fontSize: '24px',
@@ -289,8 +337,9 @@
         arcade: {
           debug: false
         }
-      },      
+      }, 
       scene: [StartScene, MainGameScene, CodexScene],
+      pixelArt: true
     };
 
     const game = new Phaser.Game(config);
