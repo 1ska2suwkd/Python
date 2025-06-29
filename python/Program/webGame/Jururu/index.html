@@ -58,6 +58,7 @@
         this.levelText = null;
         this.inventory = [];
         this.inventoryVisible = false;
+        this.boxTypes = {};  // 상자 종류를 저장하는 객체
       }
 
       preload() {
@@ -72,48 +73,29 @@
           frameWidth: 48,
           frameHeight: 40
         });
-      }
-
-      getMaxXp(level) {
-        return 100 + (level - 1) * 20;
-      }
-
-      updateXpBar() {
-        const barWidth = 200;
-        const barHeight = 10;
-        const x = 300;
-        const y = 570;
-        const fillRatio = this.xp / this.getMaxXp(this.level);
-
-        this.xpBar.clear();
-        this.xpBar.fillStyle(0x222222, 1);
-        this.xpBar.fillRect(x, y, barWidth, barHeight);
-        this.xpBar.fillStyle(0x00ff00, 1);
-        this.xpBar.fillRect(x, y, barWidth * fillRatio, barHeight);
-      }
-
-      collectXpOrb(player, orb) {
-        orb.destroy();
-        this.xp += orb.xpValue;
-
-        while (this.xp >= this.getMaxXp(this.level)) {
-          this.xp -= this.getMaxXp(this.level);
-          this.level++;
-
-          const item = this.getRandomItem();
-          this.showLevelUpChest(item); // ✅ 레벨업 시 상자 애니메이션
-        }
-
-        this.levelText.setText(this.level);
-        this.updateXpBar();
+        this.load.spritesheet('item', 'itemSheet.png', {
+          frameWidth: 16,
+          frameHeight: 16
+        });
       }
 
       create() {
-        this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
+        // 상자 종류 데이터 구조
+        this.boxTypes = {
+          'boxS': [{ frame: 0, name: '최고 등급 아이템' }],
+          'boxA': [{ frame: 1, name: 'A 등급 아이템' }],
+          'boxB': [{ frame: 2, name: 'B 등급 아이템' }],
+          'boxC': [
+            { frame: 7, name: 'C 등급 아이템 1' },  // 기존 C등급 아이템
+            { frame: 8, name: 'C 등급 아이템 2' },  // 새로운 C등급 아이템 1
+            { frame: 9, name: 'C 등급 아이템 3' },  // 새로운 C등급 아이템 2
+          ],
+          'boxD': [{ frame: 6, name: 'D 등급 아이템' }]
+        };
 
+        this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
         this.xpBar = this.add.graphics().setDepth(2);
         this.updateXpBar();
-
         this.levelText = this.add.text(395, 545, `${this.level}`, {
           fontSize: '20px',
           fill: '#00ff00',
@@ -126,6 +108,7 @@
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
+        // 인벤토리 토글
         this.input.keyboard.on('keydown-E', () => {
           if (this.inventoryVisible) {
             this.inventoryImage.setVisible(false);
@@ -154,65 +137,127 @@
 
         this.time.addEvent({
           delay: 1000,
-          callback: this.spawnXp0rbs,
+          callback: this.spawnXpOrbs,
           callbackScope: this,
           loop: true
         });
       }
 
       createBoxAnimations() {
-        // D 등급 (하위 등급)
-        this.anims.create({
-          key: 'boxD',
-          frames: this.anims.generateFrameNumbers('chest', { start: 168, end: 188 }), // D 등급 상자
-          frameRate: 10,
-          repeat: -1
-        });
-
-        // C 등급
-        this.anims.create({
-          key: 'boxC',
-          frames: this.anims.generateFrameNumbers('chest', { start: 21, end: 41 }), // C 등급 상자
-          frameRate: 10,
-          repeat: -1
-        });
-
-        // B 등급
-        this.anims.create({
-          key: 'boxB',
-          frames: this.anims.generateFrameNumbers('chest', { start: 126, end: 146 }), // B 등급 상자
-          frameRate: 10,
-          repeat: -1
-        });
-
-        // A 등급
-        this.anims.create({
-          key: 'boxA',
-          frames: this.anims.generateFrameNumbers('chest', { start: 0, end: 20 }), // A 등급 상자
-          frameRate: 10,
-          repeat: -1
-        });
-
-        // S 등급 (최고 등급)
-        this.anims.create({
-          key: 'boxS',
-          frames: this.anims.generateFrameNumbers('chest', { start: 63, end: 83 }), // S 등급 상자
-          frameRate: 10,
-          repeat: -1
+        // 각 상자 등급에 맞는 애니메이션을 만들어줍니다.
+        Object.keys(this.boxTypes).forEach((boxType) => {
+          const frames = this.getFramesForBox(boxType);
+          this.anims.create({
+            key: boxType,
+            frames: this.anims.generateFrameNumbers('chest', { start: frames.start, end: frames.end }),
+            frameRate: 10,
+            repeat: 0
+          });
         });
       }
 
-      // 랜덤으로 상자 등급을 선택하는 함수
+      getFramesForBox(boxType) {
+        const framesMap = {
+          'boxS': { start: 63, end: 83 },
+          'boxA': { start: 0, end: 20 },
+          'boxB': { start: 126, end: 146 },
+          'boxC': { start: 21, end: 41 },  // C등급 상자는 21부터 41까지
+          'boxD': { start: 168, end: 188 }
+        };
+        return framesMap[boxType] || { start: 0, end: 0 };  // 기본값 추가
+      }
+
+      getMaxXp(level) {
+        return 100 + (level - 1) * 20;
+      }
+
+      updateXpBar() {
+        const barWidth = 200;
+        const barHeight = 10;
+        const x = 300;
+        const y = 570;
+        const fillRatio = this.xp / this.getMaxXp(this.level);
+
+        this.xpBar.clear();
+        this.xpBar.fillStyle(0x222222, 1);
+        this.xpBar.fillRect(x, y, barWidth, barHeight);
+        this.xpBar.fillStyle(0x00ff00, 1);
+        this.xpBar.fillRect(x, y, barWidth * fillRatio, barHeight);
+      }
+
+      collectXpOrb(player, orb) {
+        orb.destroy();
+        this.xp += orb.xpValue;
+
+        while (this.xp >= this.getMaxXp(this.level)) {
+          this.xp -= this.getMaxXp(this.level);
+          this.level++;
+
+          this.showLevelUpChest();  // 레벨업 시 상자 애니메이션
+        }
+
+        this.levelText.setText(this.level);
+        this.updateXpBar();
+      }
+
+      showLevelUpChest() {
+        const chest = this.add.sprite(400, 300, 'chest').setScale(6).setDepth(5);
+        const animationKey = this.getRandomBoxAnimation();
+        chest.play(animationKey);
+
+        // 상자 애니메이션 끝난 후 아이템을 생성하고, 상자는 나중에 제거
+        this.time.delayedCall(1500, () => {
+          this.showLevelUpItem(animationKey, chest); 
+        });
+      }
+
+      showLevelUpItem(boxType, chest) {
+        const items = this.boxTypes[boxType];
+        const item = items[Phaser.Math.Between(0, items.length - 1)];  // 상자 등급에 맞는 아이템을 랜덤으로 선택
+        const itemFrame = item.frame;
+
+        // 아이템 생성 (상자의 중앙에서 생성)
+        const itemSprite = this.add.sprite(chest.x, chest.y, 'item', itemFrame).setScale(10).setDepth(5);
+        itemSprite.setDepth(6);
+
+          // 아이템 이름 텍스트 추가
+        const itemNameText = this.add.text(chest.x, chest.y - 60, item.name, {
+          fontSize: '20px',
+          fill: '#ffffff',
+          fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(6);
+
+        // 아이템이 상자에서 나오는 애니메이션 (위로 올라가는)
+        this.tweens.add({
+          targets: itemSprite,
+          y: chest.y - 100,  // 상자에서 150만큼 위로 올라가게 설정
+          ease: 'Power2',
+          duration: 800,
+          onComplete: () => {
+            // 아이템이 이동 후 3초 후 제거
+            this.time.delayedCall(3000, () => {
+              itemSprite.destroy();
+            });
+          }
+        });
+
+        // 상자 애니메이션 종료 후 상자 제거
+        this.time.delayedCall(1500, () => {
+          chest.destroy();
+        });
+      }
+
+
       getRandomBoxAnimation() {
-        const rand = Phaser.Math.Between(1, 100); // 1부터 100까지 랜덤 숫자
-        if (rand <= 10) return 'boxS'; // S 등급 상자 (10% 확률)
-        if (rand <= 30) return 'boxA'; // A 등급 상자 (20% 확률)
-        if (rand <= 55) return 'boxB'; // B 등급 상자 (25% 확률)
-        if (rand <= 80) return 'boxC'; // C 등급 상자 (25% 확률)
-        return 'boxD'; // D 등급 상자 (20% 확률)
+        const rand = Phaser.Math.Between(1, 100);
+        if (rand <= 10) return 'boxS';
+        if (rand <= 30) return 'boxA';
+        if (rand <= 55) return 'boxB';
+        if (rand <= 80) return 'boxC';
+        return 'boxD';
       }
 
-      spawnXp0rbs() {
+      spawnXpOrbs() {
         const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
         const y = Phaser.Math.Between(20, this.sys.game.config.height - 20);
         const scale = Phaser.Math.FloatBetween(0.05, 0.2);
@@ -248,55 +293,9 @@
 
         if (this.player.y < 0) this.player.y = height;
         else if (this.player.y > height) this.player.y = 0;
-
-        this.xpOrbs.getChildren().forEach((orb) => {
-          const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, orb.x, orb.y);
-          const attractDistance = 150;
-          const maxAttractDistance = 175;
-
-          if (distance < attractDistance) {
-            const angle = Phaser.Math.Angle.Between(orb.x, orb.y, this.player.x, this.player.y);
-            const speedMultiplier = 0.4;
-            orb.setVelocity(Math.cos(angle) * speed * speedMultiplier, Math.sin(angle) * speed * speedMultiplier);
-          } else if (distance > maxAttractDistance) {
-            orb.setVelocity(0, 0);
-          }
-        });
-      }
-
-      getRandomItem() {
-        const itemPool = [
-          { name: '네더라이트 곡괭이', probability: 1 },
-          { name: '다이아 곡괭이', probability: 20 },
-          { name: '돌 곡괭이', probability: 79 }
-        ];
-        const rand = Phaser.Math.Between(1, 100);
-        let cumulative = 0;
-
-        for (let item of itemPool) {
-          cumulative += item.probability;
-          if (rand <= cumulative) return item.name;
-        }
-      }
-
-      showLevelUpChest(itemName) {
-        const chest = this.add.sprite(400, 300, 'chest').setScale(6).setDepth(5);
-        const animationKey = this.getRandomBoxAnimation();
-        chest.play(animationKey);
-
-        const itemText = this.add.text(400, 380, `획득! ${itemName}`, {
-          fontSize: '24px',
-          fill: '#ffff00',
-          fontFamily: 'Arial',
-          backgroundColor: '#000000'
-        }).setOrigin(0.5).setDepth(6);
-
-        this.time.delayedCall(2000, () => {
-          chest.destroy();
-          itemText.destroy();
-        });
       }
     }
+
 
       
     class CodexScene extends Phaser.Scene {
