@@ -15,27 +15,23 @@
       }
 
       preload() {
-        this.load.image('background', 'background.png'); // 선택사항
+        this.load.image('startBackground', 'startBackground.jpeg'); 
+        this.load.image('title', 'title.png');
+        this.load.image('gameStart', 'gameStart.png');
+        this.load.image('codex', 'codex.png');
       }
 
       create() {
-        this.add.image(400, 300, 'background').setScale(1.9);
-
-        this.add.text(400, 180, 'Level Up! Ruru!', {
-          fontSize: '40px',
-          fill: '#ffffff',
-          fontFamily: 'Arial'
-        }).setOrigin(0.5);
-
-        const startButton = this.add.text(400, 300, '게임 시작', {
-          fontSize: '30px',
-          fill: '#00ff00'
-        }).setOrigin(0.5).setInteractive();
-
-        const codexButton = this.add.text(400, 360, '도감', {
-          fontSize: '30px',
-          fill: '#00ffff'
-        }).setOrigin(0.5).setInteractive();
+        this.add.image(400, 300, 'startBackground').setScale(1.9);
+        this.add.image(400, 180, 'title').setOrigin(0.5).setScale(0.5);
+        const startButton = this.add.image(400, 320, 'gameStart')
+        .setOrigin(0.5)
+        .setScale(0.3)
+        .setInteractive();
+        const codexButton = this.add.image(400,400,'codex')
+        .setOrigin(0.5)
+        .setScale(0.2)
+        .setInteractive();
 
         startButton.on('pointerdown', () => {
           this.scene.start('MainGameScene');
@@ -58,15 +54,12 @@
         this.level = 1;
         this.xpBar = null;
         this.levelText = null;
-        this.inventory = [];
-        this.inventoryVisible = false;
         this.boxTypes = {};  // 상자 종류를 저장하는 객체
       }
 
       preload() {
         this.load.image('player', 'player.png');
         this.load.image('background', 'background.png');
-        this.load.image('inventory', 'inventory.png');
         this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
           frameWidth: 275,
           frameHeight: 275
@@ -84,13 +77,13 @@
       create() {
         // 상자 종류 데이터 구조
         this.boxTypes = {
-          'boxS': [{ frame: 0, name: '최고 등급 아이템' }],
+          'boxS': [{ frame: 11, name: 'STAR!' }],
           'boxA': [{ frame: 1, name: 'A 등급 아이템' }],
-          'boxB': [{ frame: 2, name: 'B 등급 아이템' }],
+          'boxB': [{ frame: 527, name: 'Donuts' }],
           'boxC': [
-            { frame: 7, name: 'C rank item' },  // 기존 C등급 아이템
-            { frame: 8, name: 'C rank item' },  // 새로운 C등급 아이템 1
-            { frame: 9, name: 'C rank item' },  // 새로운 C등급 아이템 2
+            { frame: 607, name: 'Lucky Clover' },  // 기존 C등급 아이템
+            { frame: 8, name: 'C rank item2' },  // 새로운 C등급 아이템 1
+            { frame: 9, name: 'C rank item3' },  // 새로운 C등급 아이템 2
           ],
           'boxD': [{ frame: 6, name: 'D 등급 아이템' }]
         };
@@ -109,21 +102,6 @@
         this.player.setCollideWorldBounds(false);
 
         this.cursors = this.input.keyboard.createCursorKeys();
-
-        // 인벤토리 토글
-        this.input.keyboard.on('keydown-E', () => {
-          if (this.inventoryVisible) {
-            this.inventoryImage.setVisible(false);
-            this.inventoryVisible = false;
-          } else {
-            this.inventoryImage.setVisible(true);
-            this.inventoryVisible = true;
-          }
-        });
-
-        this.inventoryImage = this.add.image(400, 300, 'inventory').setDepth(1);
-        this.inventoryImage.setOrigin(0.5).setScale(1.3).setVisible(false);
-        this.inventoryVisible = false;
 
         this.xpOrbs = this.physics.add.group();
         this.physics.add.overlap(this.player, this.xpOrbs, this.collectXpOrb, null, this);
@@ -223,7 +201,7 @@
 
           // 아이템 이름 텍스트 추가
         const itemNameText = this.add.text(chest.x, chest.y - 60, item.name, {
-          fontSize: '20px',
+          fontSize: '30px',
           fill: '#ffffff',
           fontFamily: '"Press Start 2P", monospace',
           stroke: '#000000',
