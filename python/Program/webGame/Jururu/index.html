@@ -112,8 +112,8 @@
 
       preload() {
         this.load.spritesheet('playerSpriteSheet','playerWalk.png',{
-          frameWidth: 341,
-          frameHeight: 400,
+          frameWidth: 32,
+          frameHeight: 32,
         });
         this.load.image('background', 'background.png');
         this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
@@ -139,37 +139,43 @@
         }).setDepth(2);
 
         this.player = this.physics.add.sprite(400, 300, 'playerSpriteSheet', 0);
-        this.player.setScale(0.5);
+        this.player.setScale(4);
         this.player.setCollideWorldBounds(false);
 
         this.anims.create({
-          key: 'player_walk_down',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 8 }), // 걷는 프레임 범위
-          frameRate: 10,
+          key: 'player_walk_stop',
+          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 3 }), // 걷는 프레임 범위
+          frameRate: 4,
           repeat: -1
-        });
-
+        });      
+        
         this.anims.create({
-          key: 'player_walk_up',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 8 }),
+          key: 'player_walk_down',
+          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 20, end: 27 }), // 걷는 프레임 범위
           frameRate: 10,
           repeat: -1
         });
-
+        
         this.anims.create({
           key: 'player_walk_left',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 8 }),
+          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 28, end: 35 }),
           frameRate: 10,
           repeat: -1
         });
-
+        
         this.anims.create({
           key: 'player_walk_right',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 8 }),
+          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 36, end: 43 }),
           frameRate: 10,
           repeat: -1
         });
-
+        
+        this.anims.create({
+          key: 'player_walk_up',
+          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 44, end: 51 }),
+          frameRate: 10,
+          repeat: -1
+        });
         this.cursors = this.input.keyboard.createCursorKeys();
         this.xpOrbs = this.physics.add.group();
         this.physics.add.overlap(this.player, this.xpOrbs, this.collectXpOrb, null, this);
@@ -268,12 +274,11 @@
         return 'boxD';
       }
 
-      // MainGameScene의 update 메서드
-      // MainGameScene의 update 메서드
       update() {
         const speed = 400;
         let vx = 0, vy = 0;
         let isMoving = false; // 플레이어가 움직이는지 여부를 추적
+        let targetAnim = '';
 
         // 입력 감지 및 속도 설정
         if (this.cursors.left.isDown) {
@@ -297,7 +302,6 @@
         // ✨ 애니메이션 / 이미지 표시 로직 변경 ✨
         if (isMoving) {
           // 움직이는 중이라면, 해당 방향의 걷기 애니메이션 재생
-          let targetAnim = '';
           if (this.cursors.left.isDown) {
             targetAnim = 'player_walk_left';
           } else if (this.cursors.right.isDown) {
@@ -307,21 +311,16 @@
           } else if (this.cursors.down.isDown) {
             targetAnim = 'player_walk_down';
           }
-
           // 현재 재생 중인 애니메이션이 없거나, 목표 애니메이션과 다를 때만 재생
           if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
-            // 텍스처를 스프라이트 시트로 변경 (이미 되어있을 것이므로 이 줄은 사실 불필요)
-            // this.player.setTexture('playerSpriteSheet'); // 이 줄은 제거해도 됩니다.
             this.player.play(targetAnim);
           }
-        } else {
-          // 움직이지 않는다면, 현재 애니메이션을 멈추고 0번 프레임으로 설정
-          if (this.player.anims.isPlaying) {
-            this.player.anims.stop();
+        } else { //멈춰있을 때
+          targetAnim = 'player_walk_stop'
+          if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
+            this.player.play(targetAnim);
           }
-          // 텍스처를 playerSpriteSheet로 유지하고 0번 프레임을 표시
-          this.player.setFrame(0); // 0번 프레임은 플레이어가 정면을 보는 정지 상태로 가정
-        }
+        } 
 
         const width = this.sys.game.config.width;
         const height = this.sys.game.config.height;
