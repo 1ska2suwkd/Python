@@ -276,7 +276,7 @@
               targets: itemSprite, y: chest.y - 100, ease: 'Power2', duration: 800,
               onComplete: () => {
                 // 아이템 텍스트와 스프라이트가 완전히 사라지는 딜레이 (3000ms) 후에 다음 큐 항목 처리
-                this.time.delayedCall(3000, () => {
+                this.time.delayedCall(2500, () => {
                   itemSprite.destroy();
                   itemNameText.destroy();
                   chest.destroy();
