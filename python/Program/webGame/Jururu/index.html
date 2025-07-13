@@ -97,264 +97,297 @@
     
 
     // ------------------- 메인 게임 씬 (MainGameScene) -------------------
-    class MainGameScene extends Phaser.Scene {
-      constructor() {
-        super('MainGameScene');
-        this.player = null;
-        this.cursors = null;
-        this.xpOrbs = null;
-        this.xp = 0;
-        this.level = 1;
-        this.xpBar = null;
-        this.levelText = null;
-        this.boxTypes = {};
+  class MainGameScene extends Phaser.Scene {
+    constructor() {
+      super('MainGameScene');
+      this.player = null;
+      this.cursors = null;
+      this.xpOrbs = null;
+      this.xp = 0;
+      this.level = 1;
+      this.xpBar = null;
+      this.levelText = null;
+      this.boxTypes = {};
+      this.itemAnimationQueue = [];
+      this.isAnimationPlaying = false; // ✨ 새로운 플래그 추가 ✨: 현재 레벨업 애니메이션이 재생 중인지
+    }
+
+    preload() {
+      this.load.spritesheet('playerSpriteSheet', 'player.png', {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
+      this.load.image('background', 'background.png');
+      this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
+        frameWidth: 275,
+        frameHeight: 275
+      });
+      this.load.spritesheet('chest', 'chestSheet.png', {
+        frameWidth: 48,
+        frameHeight: 40
+      });
+      // StartScene에도 있지만, 명확성을 위해 MainGameScene에도 로드
+      this.load.spritesheet('item', 'itemSheet.png', {
+        frameWidth: 16, // 실제 itemSheet.png의 프레임 폭과 높이에 맞게 수정
+        frameHeight: 16
+      });
+    }
+
+    create() {
+      this.boxTypes = {
+        'boxS': [1], 'boxA': [2], 'boxB': [3], 'boxC': [4, 5, 6], 'boxD': [7]
+      };
+
+      this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
+      this.xpBar = this.add.graphics().setDepth(2);
+      this.updateXpBar();
+      this.levelText = this.add.text(395, 545, `${this.level}`, {
+        fontSize: '20px', fill: '#00ff00', fontFamily: 'Minecraft',
+      }).setDepth(2);
+
+      this.player = this.physics.add.sprite(400, 300, 'playerSpriteSheet', 0);
+      this.player.setScale(4);
+      this.player.setCollideWorldBounds(false);
+
+      this.anims.create({
+        key: 'player_walk_stop',
+        frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 3 }),
+        frameRate: 4,
+        repeat: -1
+      });
+
+      this.anims.create({
+        key: 'player_walk_down',
+        frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 20, end: 27 }),
+        frameRate: 10,
+        repeat: -1
+      });
+
+      this.anims.create({
+        key: 'player_walk_left',
+        frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 28, end: 35 }),
+        frameRate: 10,
+        repeat: -1
+      });
+
+      this.anims.create({
+        key: 'player_walk_right',
+        frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 36, end: 43 }),
+        frameRate: 10,
+        repeat: -1
+      });
+
+      this.anims.create({
+        key: 'player_walk_up',
+        frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 44, end: 51 }),
+        frameRate: 10,
+        repeat: -1
+      });
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.xpOrbs = this.physics.add.group();
+      this.physics.add.overlap(this.player, this.xpOrbs, this.collectXpOrb, null, this);
+
+      this.anims.create({ key: 'orbSpin', frames: this.anims.generateFrameNumbers('xpOrbs', { start: 0, end: 11 }), frameRate: 10, repeat: -1 });
+      this.createBoxAnimations();
+      this.time.addEvent({ delay: 1000, callback: this.spawnXpOrbs, callbackScope: this, loop: true });
+      this.input.keyboard.on('keydown-ESC', this.handleEscapeKey, this);
+    }
+
+    handleEscapeKey() {
+      this.scene.start('StartScene');
+    }
+
+    createBoxAnimations() {
+      Object.keys(this.boxTypes).forEach((boxType) => {
+        const frames = this.getFramesForBox(boxType);
+        this.anims.create({ key: boxType, frames: this.anims.generateFrameNumbers('chest', { start: frames.start, end: frames.end }), frameRate: 10, repeat: 0 });
+      });
+    }
+
+    getFramesForBox(boxType) {
+      const framesMap = { 'boxS': { start: 63, end: 83 }, 'boxA': { start: 0, end: 20 }, 'boxB': { start: 126, end: 146 }, 'boxC': { start: 21, end: 41 }, 'boxD': { start: 168, end: 188 } };
+      return framesMap[boxType] || { start: 0, end: 0 };
+    }
+
+    collectXpOrb(player, orb) {
+      orb.destroy();
+      this.xp += orb.xpValue;
+
+      let leveledUpThisCall = false;
+
+      while (this.xp >= this.getMaxXp(this.level)) {
+        this.xp -= this.getMaxXp(this.level);
+        this.level++;
+        leveledUpThisCall = true;
       }
 
-      preload() {
-        this.load.spritesheet('playerSpriteSheet','player.png',{
-          frameWidth: 32,
-          frameHeight: 32,
-        });
-        this.load.image('background', 'background.png');
-        this.load.spritesheet('xpOrbs', 'xpOrbSheet.png', {
-          frameWidth: 275,
-          frameHeight: 275
-        });
-        this.load.spritesheet('chest', 'chestSheet.png', {
-          frameWidth: 48,
-          frameHeight: 40
-        });
-      }
+      if (leveledUpThisCall) {
+        this.itemAnimationQueue.push({ type: 'levelUpAnimation' });
 
-      create() {
-        this.boxTypes = {
-          'boxS': [1], 'boxA': [2], 'boxB': [3], 'boxC': [4, 5, 6], 'boxD': [7]
-        };
-
-        this.add.image(400, 300, 'background').setScale(1.9).setDepth(-1);
-        this.xpBar = this.add.graphics().setDepth(2);
-        this.updateXpBar();
-        this.levelText = this.add.text(395, 545, `${this.level}`, {
-          fontSize: '20px', fill: '#00ff00', fontFamily: 'Minecraft',
-        }).setDepth(2);
-
-        this.player = this.physics.add.sprite(400, 300, 'playerSpriteSheet', 0);
-        this.player.setScale(4);
-        this.player.setCollideWorldBounds(false);
-
-        this.anims.create({
-          key: 'player_walk_stop',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 0, end: 3 }), // 걷는 프레임 범위
-          frameRate: 4,
-          repeat: -1
-        });      
-        
-        this.anims.create({
-          key: 'player_walk_down',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 20, end: 27 }), // 걷는 프레임 범위
-          frameRate: 10,
-          repeat: -1
-        });
-        
-        this.anims.create({
-          key: 'player_walk_left',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 28, end: 35 }),
-          frameRate: 10,
-          repeat: -1
-        });
-        
-        this.anims.create({
-          key: 'player_walk_right',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 36, end: 43 }),
-          frameRate: 10,
-          repeat: -1
-        });
-        
-        this.anims.create({
-          key: 'player_walk_up',
-          frames: this.anims.generateFrameNumbers('playerSpriteSheet', { start: 44, end: 51 }),
-          frameRate: 10,
-          repeat: -1
-        });
-        this.cursors = this.input.keyboard.createCursorKeys();
-        this.xpOrbs = this.physics.add.group();
-        this.physics.add.overlap(this.player, this.xpOrbs, this.collectXpOrb, null, this);
-
-        this.anims.create({ key: 'orbSpin', frames: this.anims.generateFrameNumbers('xpOrbs', { start: 0, end: 11 }), frameRate: 10, repeat: -1 });
-        this.createBoxAnimations();
-        this.time.addEvent({ delay: 1000, callback: this.spawnXpOrbs, callbackScope: this, loop: true });
-        this.input.keyboard.on('keydown-ESC', this.handleEscapeKey, this);
-      }
-
-      handleEscapeKey() {
-        this.scene.start('StartScene');
-      }
-
-      createBoxAnimations() {
-        Object.keys(this.boxTypes).forEach((boxType) => {
-          const frames = this.getFramesForBox(boxType);
-          this.anims.create({ key: boxType, frames: this.anims.generateFrameNumbers('chest', { start: frames.start, end: frames.end }), frameRate: 10, repeat: 0 });
-        });
-      }
-
-      getFramesForBox(boxType) {
-        const framesMap = { 'boxS': { start: 63, end: 83 }, 'boxA': { start: 0, end: 20 }, 'boxB': { start: 126, end: 146 }, 'boxC': { start: 21, end: 41 }, 'boxD': { start: 168, end: 188 } };
-        return framesMap[boxType] || { start: 0, end: 0 };
-      }
-      
-      collectXpOrb(player, orb) {
-        orb.destroy();
-        this.xp += orb.xpValue;
-        while (this.xp >= this.getMaxXp(this.level)) {
-          this.xp -= this.getMaxXp(this.level);
-          this.level++;
-          this.showLevelUpChest();
+        // ✨ 수정된 조건: 현재 애니메이션이 재생 중이 아닐 때만 큐 처리를 시작합니다. ✨
+        if (!this.isAnimationPlaying) {
+          this.processAnimationQueue();
         }
-        this.levelText.setText(this.level);
-        this.updateXpBar();
       }
-      
-      showLevelUpChest() {
+
+      this.levelText.setText(this.level);
+      this.updateXpBar();
+    }
+
+    processAnimationQueue() {
+      // 큐가 비어있으면 더 이상 처리할 애니메이션이 없으므로 종료합니다.
+      if (this.itemAnimationQueue.length === 0) {
+        this.isAnimationPlaying = false; // ✨ 큐가 비면 애니메이션 재생 상태를 false로 설정 ✨
+        return;
+      }
+
+      // ✨ 애니메이션 재생 시작을 알립니다. ✨
+      this.isAnimationPlaying = true;
+
+      // 큐에서 다음 애니메이션 요청을 가져옵니다.
+      const animationRequest = this.itemAnimationQueue.shift();
+
+      if (animationRequest.type === 'levelUpAnimation') {
         const chest = this.add.sprite(400, 300, 'chest').setScale(6).setDepth(5);
         const animationKey = this.getRandomBoxAnimation();
+
         chest.play(animationKey);
+        chest.on(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim) => {
+          if (anim.key === animationKey) {
+            const itemIds = this.boxTypes[animationKey];
+            const randomItemId = Phaser.Math.RND.pick(itemIds);
+            const itemData = masterItemList.find(item => item.id === randomItemId);
 
-        this.time.delayedCall(1500, () => {
-          this.showLevelUpItem(animationKey, chest); 
-        });
-      }
-      
-      showLevelUpItem(boxType, chest) {
-        const itemIds = this.boxTypes[boxType];
-        const randomItemId = Phaser.Math.RND.pick(itemIds);
-        const itemData = masterItemList.find(item => item.id === randomItemId);
+            if (!itemData) {
+              chest.destroy();
+              // 아이템을 찾지 못했으므로 다음 큐 항목을 바로 처리합니다.
+              this.processAnimationQueue();
+              return;
+            }
 
-        if (!itemData) {
-            chest.destroy(); return;
-        }
-        
-        // ✨ 도감에 아이템 등록 및 저장 ✨
-        this.registerItemInCodex(itemData.id);
+            this.registerItemInCodex(itemData.id);
 
-        const itemSprite = this.add.sprite(chest.x, chest.y, 'item', itemData.frame).setScale(10).setDepth(5);
-        const itemNameText = this.add.text(chest.x, chest.y - 60, itemData.name, {
-            fontSize: '30px', fill: '#ffffff', fontFamily: '"Press Start 2P"', stroke: '#000000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(6);
-        
-        this.tweens.add({
-            targets: itemSprite, y: chest.y - 100, ease: 'Power2', duration: 800,
-            onComplete: () => {
+            const itemSprite = this.add.sprite(chest.x, chest.y, 'item', itemData.frame).setScale(10).setDepth(5);
+            const itemNameText = this.add.text(chest.x, chest.y - 60, itemData.name, {
+              fontSize: '30px', fill: '#ffffff', fontFamily: '"Press Start 2P"', stroke: '#000000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(6);
+
+            this.tweens.add({
+              targets: itemSprite, y: chest.y - 100, ease: 'Power2', duration: 800,
+              onComplete: () => {
+                // 아이템 텍스트와 스프라이트가 완전히 사라지는 딜레이 (3000ms) 후에 다음 큐 항목 처리
                 this.time.delayedCall(3000, () => {
-                    itemSprite.destroy();
-                    itemNameText.destroy();
+                  itemSprite.destroy();
+                  itemNameText.destroy();
+                  chest.destroy();
+
+                  // ✨ 현재 애니메이션 시퀀스가 완전히 끝났으므로 다음 큐 항목을 처리합니다. ✨
+                  this.processAnimationQueue();
                 });
-            }
-        });
-
-        this.time.delayedCall(1500, () => chest.destroy());
-      }
-      
-      registerItemInCodex(itemId) {
-        if (!playerData.discoveredItems.has(itemId)) {
-          playerData.discoveredItems.add(itemId);
-          saveData();
-          const alertText = this.add.text(400, 100, '새로운 아이템 도감에 등록!', {
-            fontSize: '20px', fill: '#FFD700', stroke: '#000', strokeThickness: 2
-          }).setOrigin(0.5).setDepth(10);
-          this.tweens.add({ targets: alertText, alpha: 0, ease: 'Linear', duration: 2000, onComplete: () => alertText.destroy() });
-        }
-      }
-
-      getRandomBoxAnimation() {
-        const rand = Phaser.Math.Between(1, 100);
-        if (rand <= 10) return 'boxS';
-        if (rand <= 25) return 'boxA';
-        if (rand <= 45) return 'boxB';
-        if (rand <= 70) return 'boxC';
-        return 'boxD';
-      }
-
-      update() {
-        const speed = 400;
-        let vx = 0, vy = 0;
-        let isMoving = false; // 플레이어가 움직이는지 여부를 추적
-        let targetAnim = '';
-
-        // 입력 감지 및 속도 설정
-        if (this.cursors.left.isDown) {
-          vx = -speed;
-          isMoving = true;
-        } else if (this.cursors.right.isDown) {
-          vx = speed;
-          isMoving = true;
-        }
-
-        if (this.cursors.up.isDown) {
-          vy = -speed;
-          isMoving = true;
-        } else if (this.cursors.down.isDown) {
-          vy = speed;
-          isMoving = true;
-        }
-
-        this.player.setVelocity(vx, vy);
-
-        // ✨ 애니메이션 / 이미지 표시 로직 변경 ✨
-        if (isMoving) {
-          // 움직이는 중이라면, 해당 방향의 걷기 애니메이션 재생
-          if (this.cursors.left.isDown) {
-            targetAnim = 'player_walk_left';
-          } else if (this.cursors.right.isDown) {
-            targetAnim = 'player_walk_right';
-          } else if (this.cursors.up.isDown) {
-            targetAnim = 'player_walk_up';
-          } else if (this.cursors.down.isDown) {
-            targetAnim = 'player_walk_down';
-          }
-          // 현재 재생 중인 애니메이션이 없거나, 목표 애니메이션과 다를 때만 재생
-          if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
-            this.player.play(targetAnim);
-          }
-        } else { //멈춰있을 때
-          targetAnim = 'player_walk_stop'
-          if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
-            this.player.play(targetAnim);
-          }
-        } 
-
-        const width = this.sys.game.config.width;
-        const height = this.sys.game.config.height;
-
-        if (this.player.x < 0) this.player.x = width; else if (this.player.x > width) this.player.x = 0;
-        if (this.player.y < 0) this.player.y = height; else if (this.player.y > height) this.player.y = 0;
-
-        this.xpOrbs.getChildren().forEach(orb => {
-          const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, orb.x, orb.y);
-          if (distance < 175) {
-            if (orb.body.velocity.x === 0 && orb.body.velocity.y === 0) {
-              this.physics.moveToObject(orb, this.player, speed * 0.4);
-            }
-          } else {
-            orb.setVelocity(0, 0);
+              }
+            });
           }
         });
-      }
-      getMaxXp(level) { return 100 + (level - 1) * 20; }
-      updateXpBar() {
-        const barWidth = 200, barHeight = 10, x = 300, y = 570;
-        const fillRatio = this.xp / this.getMaxXp(this.level);
-        this.xpBar.clear();
-        this.xpBar.fillStyle(0x222222, 1).fillRect(x, y, barWidth, barHeight);
-        this.xpBar.fillStyle(0x00ff00, 1).fillRect(x, y, barWidth * fillRatio, barHeight);
-      }
-      spawnXpOrbs() {
-        const x = Phaser.Math.Between(20, 780), y = Phaser.Math.Between(20, 580);
-        const scale = Phaser.Math.FloatBetween(0.05, 0.2);
-        const orb = this.xpOrbs.create(x, y, 'xpOrbs').setScale(scale).play('orbSpin');
-        orb.xpValue = Math.round(scale * 200);
-        this.time.delayedCall(5000, () => orb.active && orb.destroy());
       }
     }
+
+    registerItemInCodex(itemId) {
+      if (!playerData.discoveredItems.has(itemId)) {
+        playerData.discoveredItems.add(itemId);
+        saveData();
+        const alertText = this.add.text(400, 100, '새로운 아이템 도감에 등록!', {
+          fontSize: '20px', fill: '#FFD700', stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5).setDepth(10);
+        this.tweens.add({ targets: alertText, alpha: 0, ease: 'Linear', duration: 2000, onComplete: () => alertText.destroy() });
+      }
+    }
+
+    getRandomBoxAnimation() {
+      const rand = Phaser.Math.Between(1, 100);
+      if (rand <= 10) return 'boxS';
+      if (rand <= 25) return 'boxA';
+      if (rand <= 45) return 'boxB';
+      if (rand <= 70) return 'boxC';
+      return 'boxD';
+    }
+
+    update() {
+      const speed = 400;
+      let vx = 0, vy = 0;
+      let isMoving = false;
+      let targetAnim = '';
+
+      if (this.cursors.left.isDown) {
+        vx = -speed;
+        isMoving = true;
+      } else if (this.cursors.right.isDown) {
+        vx = speed;
+        isMoving = true;
+      }
+
+      if (this.cursors.up.isDown) {
+        vy = -speed;
+        isMoving = true;
+      } else if (this.cursors.down.isDown) {
+        vy = speed;
+        isMoving = true;
+      }
+
+      this.player.setVelocity(vx, vy);
+
+      if (isMoving) {
+        if (this.cursors.left.isDown) {
+          targetAnim = 'player_walk_left';
+        } else if (this.cursors.right.isDown) {
+          targetAnim = 'player_walk_right';
+        } else if (this.cursors.up.isDown) {
+          targetAnim = 'player_walk_up';
+        } else if (this.cursors.down.isDown) {
+          targetAnim = 'player_walk_down';
+        }
+        if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
+          this.player.play(targetAnim);
+        }
+      } else {
+        targetAnim = 'player_walk_stop'
+        if (this.player.anims.currentAnim === null || this.player.anims.currentAnim.key !== targetAnim) {
+          this.player.play(targetAnim);
+        }
+      }
+
+      const width = this.sys.game.config.width;
+      const height = this.sys.game.config.height;
+
+      if (this.player.x < 0) this.player.x = width; else if (this.player.x > width) this.player.x = 0;
+      if (this.player.y < 0) this.player.y = height; else if (this.player.y > height) this.player.y = 0;
+
+      this.xpOrbs.getChildren().forEach(orb => {
+        const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, orb.x, orb.y);
+        if (distance < 175) {
+          if (orb.body.velocity.x === 0 && orb.body.velocity.y === 0) {
+            this.physics.moveToObject(orb, this.player, speed * 0.4);
+          }
+        } else {
+          orb.setVelocity(0, 0);
+        }
+      });
+    }
+    getMaxXp(level) { return 100 + (level - 1) * 20; }
+    updateXpBar() {
+      const barWidth = 200, barHeight = 10, x = 300, y = 570;
+      const fillRatio = this.xp / this.getMaxXp(this.level);
+      this.xpBar.clear();
+      this.xpBar.fillStyle(0x222222, 1).fillRect(x, y, barWidth, barHeight);
+      this.xpBar.fillStyle(0x00ff00, 1).fillRect(x, y, barWidth * fillRatio, barHeight);
+    }
+    spawnXpOrbs() {
+      const x = Phaser.Math.Between(20, 780), y = Phaser.Math.Between(20, 580);
+      const scale = Phaser.Math.FloatBetween(0.05, 0.2);
+      const orb = this.xpOrbs.create(x, y, 'xpOrbs').setScale(scale).play('orbSpin');
+      orb.xpValue = Math.round(scale * 200);
+      this.time.delayedCall(5000, () => orb.active && orb.destroy());
+    }
+  }
     
     // ------------------- 도감 씬 (CodexScene) -------------------
     class CodexScene extends Phaser.Scene {
