@@ -134,6 +134,8 @@
     }
 
     create() {
+      this.isAnimationPlaying = false;
+      this.itemAnimationQueue = [];
       this.boxTypes = {
         'boxS': [1], 'boxA': [2], 'boxB': [3], 'boxC': [4, 5, 6], 'boxD': [7]
       };
